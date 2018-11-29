@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IChannel } from 'vs/base/parts/ipc/node/ipc';
 import { IWorkspacesService, IWorkspaceIdentifier, IWorkspaceFolderCreationData, IWorkspacesMainService } from 'vs/platform/workspaces/common/workspaces';
@@ -21,14 +19,14 @@ export class WorkspacesChannel implements IWorkspacesChannel {
 	constructor(private service: IWorkspacesMainService) { }
 
 	listen<T>(event: string, arg?: any): Event<T> {
-		throw new Error('No events');
+		throw new Error(`Event not found: ${event}`);
 	}
 
 	call(command: string, arg?: any): Thenable<any> {
 		switch (command) {
 			case 'createWorkspace': {
 				const rawFolders: IWorkspaceFolderCreationData[] = arg;
-				let folders: IWorkspaceFolderCreationData[];
+				let folders: IWorkspaceFolderCreationData[] | undefined = undefined;
 				if (Array.isArray(rawFolders)) {
 					folders = rawFolders.map(rawFolder => {
 						return {
@@ -42,7 +40,7 @@ export class WorkspacesChannel implements IWorkspacesChannel {
 			}
 		}
 
-		return void 0;
+		throw new Error(`Call not found: ${command}`);
 	}
 }
 

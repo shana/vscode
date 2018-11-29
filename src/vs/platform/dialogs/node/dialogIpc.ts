@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IChannel } from 'vs/base/parts/ipc/node/ipc';
 import { IDialogService, IConfirmation, IConfirmationResult } from 'vs/platform/dialogs/common/dialogs';
@@ -27,8 +25,8 @@ export class DialogChannel implements IDialogChannel {
 
 	call(command: string, args?: any[]): Thenable<any> {
 		switch (command) {
-			case 'show': return this.dialogService.show(args[0], args[1], args[2]);
-			case 'confirm': return this.dialogService.confirm(args[0]);
+			case 'show': return this.dialogService.show(args![0], args![1], args![2]);
+			case 'confirm': return this.dialogService.confirm(args![0]);
 		}
 		return TPromise.wrapError(new Error('invalid command'));
 	}

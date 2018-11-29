@@ -17,7 +17,6 @@ import { MenuId } from 'vs/platform/actions/common/actions';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { twistiePixels, renderViewTree, IVariableTemplateData, BaseDebugController, renderRenameBox, renderVariable } from 'vs/workbench/parts/debug/browser/baseDebugView';
-import { TPromise } from 'vs/base/common/winjs.base';
 import { IAction, IActionItem } from 'vs/base/common/actions';
 import { SetValueAction, AddToWatchExpressionsAction } from 'vs/workbench/parts/debug/browser/debugActions';
 import { CopyValueAction, CopyEvaluatePathAction } from 'vs/workbench/parts/debug/electron-browser/electronDebugActions';
@@ -34,9 +33,7 @@ const $ = dom.$;
 
 export class VariablesView extends TreeViewsViewletPanel {
 
-	private static readonly MEMENTO = 'variablesview.memento';
 	private onFocusStackFrameScheduler: RunOnceScheduler;
-	private settings: any;
 	private expandedElements: any[];
 	private needsRefresh: boolean;
 	private treeContainer: HTMLElement;
@@ -51,7 +48,6 @@ export class VariablesView extends TreeViewsViewletPanel {
 	) {
 		super({ ...(options as IViewletPanelOptions), ariaHeaderLabel: nls.localize('variablesSection', "Variables Section") }, keybindingService, contextMenuService, configurationService);
 
-		this.settings = options.viewletSettings;
 		this.expandedElements = [];
 		// Use scheduler to prevent unnecessary flashing
 		this.onFocusStackFrameScheduler = new RunOnceScheduler(() => {
@@ -142,17 +138,11 @@ export class VariablesView extends TreeViewsViewletPanel {
 		}
 	}
 
-	public setVisible(visible: boolean): TPromise<void> {
-		return super.setVisible(visible).then(() => {
-			if (visible && this.needsRefresh) {
-				this.onFocusStackFrameScheduler.schedule();
-			}
-		});
-	}
-
-	public shutdown(): void {
-		this.settings[VariablesView.MEMENTO] = !this.isExpanded();
-		super.shutdown();
+	public setVisible(visible: boolean): void {
+		super.setVisible(visible);
+		if (visible && this.needsRefresh) {
+			this.onFocusStackFrameScheduler.schedule();
+		}
 	}
 }
 
@@ -166,8 +156,8 @@ class VariablesActionProvider implements IActionProvider {
 		return false;
 	}
 
-	public getActions(tree: ITree, element: any): TPromise<IAction[]> {
-		return Promise.resolve([]);
+	public getActions(tree: ITree, element: any): IAction[] {
+		return [];
 	}
 
 	public hasSecondaryActions(tree: ITree, element: any): boolean {
@@ -175,7 +165,7 @@ class VariablesActionProvider implements IActionProvider {
 		return element instanceof Variable && !!element.value;
 	}
 
-	public getSecondaryActions(tree: ITree, element: any): TPromise<IAction[]> {
+	public getSecondaryActions(tree: ITree, element: any): IAction[] {
 		const actions: IAction[] = [];
 		const variable = <Variable>element;
 		actions.push(new SetValueAction(SetValueAction.ID, SetValueAction.LABEL, variable, this.debugService, this.keybindingService));
@@ -184,7 +174,7 @@ class VariablesActionProvider implements IActionProvider {
 		actions.push(new Separator());
 		actions.push(new AddToWatchExpressionsAction(AddToWatchExpressionsAction.ID, AddToWatchExpressionsAction.LABEL, variable, this.debugService, this.keybindingService));
 
-		return Promise.resolve(actions);
+		return actions;
 	}
 
 	public getActionItem(tree: ITree, element: any, action: IAction): IActionItem {
@@ -207,7 +197,7 @@ export class VariablesDataSource implements IDataSource {
 		return variable.hasChildren && !equalsIgnoreCase(variable.value, 'null');
 	}
 
-	public getChildren(tree: ITree, element: any): TPromise<any> {
+	public getChildren(tree: ITree, element: any): Promise<any> {
 		if (element instanceof ViewModel) {
 			const focusedStackFrame = (<ViewModel>element).focusedStackFrame;
 			return focusedStackFrame ? focusedStackFrame.getScopes() : Promise.resolve([]);
@@ -217,7 +207,7 @@ export class VariablesDataSource implements IDataSource {
 		return scope.getChildren();
 	}
 
-	public getParent(tree: ITree, element: any): TPromise<any> {
+	public getParent(tree: ITree, element: any): Promise<any> {
 		return Promise.resolve(null);
 	}
 }

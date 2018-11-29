@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import * as assert from 'assert';
 import { ITextModel } from 'vs/editor/common/model';
 import { TPromise } from 'vs/base/common/winjs.base';
@@ -61,8 +59,8 @@ suite('Workbench - TextModelResolverService', () => {
 			provideTextContent: function (resource: URI): TPromise<ITextModel> {
 				if (resource.scheme === 'test') {
 					let modelContent = 'Hello Test';
-					let mode = accessor.modeService.getOrCreateMode('json');
-					return TPromise.as(accessor.modelService.createModel(modelContent, mode, resource));
+					let languageSelection = accessor.modeService.create('json');
+					return TPromise.as(accessor.modelService.createModel(modelContent, languageSelection, resource));
 				}
 
 				return TPromise.as(null);
@@ -133,14 +131,14 @@ suite('Workbench - TextModelResolverService', () => {
 
 	test('even loading documents should be refcounted', async () => {
 		let resolveModel: Function;
-		let waitForIt = new TPromise(c => resolveModel = c);
+		let waitForIt = new Promise(c => resolveModel = c);
 
 		const disposable = accessor.textModelResolverService.registerTextModelContentProvider('test', {
 			provideTextContent: (resource: URI): TPromise<ITextModel> => {
 				return waitForIt.then(_ => {
 					let modelContent = 'Hello Test';
-					let mode = accessor.modeService.getOrCreateMode('json');
-					return accessor.modelService.createModel(modelContent, mode, resource);
+					let languageSelection = accessor.modeService.create('json');
+					return accessor.modelService.createModel(modelContent, languageSelection, resource);
 				});
 			}
 		});

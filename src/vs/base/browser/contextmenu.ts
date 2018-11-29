@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import { IAction, IActionRunner } from 'vs/base/common/actions';
 import { IActionItem } from 'vs/base/browser/ui/actionbar/actionbar';
@@ -24,7 +23,7 @@ export class ContextSubMenu extends SubmenuAction {
 
 export interface IContextMenuDelegate {
 	getAnchor(): HTMLElement | { x: number; y: number; width?: number; height?: number; };
-	getActions(): Thenable<(IAction | ContextSubMenu)[]>;
+	getActions(): (IAction | ContextSubMenu)[];
 	getActionItem?(action: IAction): IActionItem;
 	getActionsContext?(event?: IContextMenuEvent): any;
 	getKeyBinding?(action: IAction): ResolvedKeybinding;

@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import * as nls from 'vs/nls';
 import { URI } from 'vs/base/common/uri';
 import * as errors from 'vs/base/common/errors';
@@ -239,7 +237,7 @@ export class ElectronWindow extends Themable {
 
 				this.contextMenuService.showContextMenu({
 					getAnchor: () => e,
-					getActions: () => TPromise.as(TextInputActions),
+					getActions: () => TextInputActions,
 					onHide: () => target.focus() // fixes https://github.com/Microsoft/vscode/issues/52948
 				});
 			}

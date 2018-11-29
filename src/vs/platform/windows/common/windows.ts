@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import { TPromise } from 'vs/base/common/winjs.base';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { Event, latch, anyEvent } from 'vs/base/common/event';
@@ -85,6 +83,7 @@ export interface SaveDialogOptions {
 }
 
 export interface INewWindowOptions {
+	remoteAuthority?: string;
 }
 
 export interface IDevToolsOptions {
@@ -169,6 +168,7 @@ export interface IWindowsService {
 	startCrashReporter(config: CrashReporterStartOptions): TPromise<void>;
 
 	openAboutDialog(): TPromise<void>;
+	resolveProxy(windowId: number, url: string): Promise<string | undefined>;
 }
 
 export const IWindowService = createDecorator<IWindowService>('windowService');
@@ -216,6 +216,7 @@ export interface IWindowService {
 	showMessageBox(options: MessageBoxOptions): TPromise<IMessageBoxResult>;
 	showSaveDialog(options: SaveDialogOptions): TPromise<string>;
 	showOpenDialog(options: OpenDialogOptions): TPromise<string[]>;
+	resolveProxy(url: string): Promise<string | undefined>;
 }
 
 export type MenuBarVisibility = 'default' | 'visible' | 'toggle' | 'hidden';
@@ -236,6 +237,7 @@ export interface IWindowSettings {
 	menuBarVisibility: MenuBarVisibility;
 	newWindowDimensions: 'default' | 'inherit' | 'maximized' | 'fullscreen';
 	nativeTabs: boolean;
+	nativeFullScreen: boolean;
 	enableMenuBarMnemonics: boolean;
 	closeWhenEmpty: boolean;
 	smoothScrollingWorkaround: boolean;
@@ -344,6 +346,8 @@ export interface IWindowConfiguration extends ParsedArgs {
 	workspace?: IWorkspaceIdentifier;
 	folderUri?: ISingleFolderWorkspaceIdentifier;
 
+	remoteAuthority?: string;
+
 	zoomLevel?: number;
 	fullscreen?: boolean;
 	maximized?: boolean;
@@ -382,7 +386,7 @@ export class ActiveWindowManager implements IDisposable {
 			.then(id => (typeof this._activeWindowId === 'undefined') && this.setActiveWindow(id));
 	}
 
-	private setActiveWindow(windowId: number) {
+	private setActiveWindow(windowId: number | undefined) {
 		if (this.firstActiveWindowIdPromise) {
 			this.firstActiveWindowIdPromise = null;
 		}

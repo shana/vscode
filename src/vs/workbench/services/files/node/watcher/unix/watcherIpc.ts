@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import { TPromise } from 'vs/base/common/winjs.base';
 import { IChannel } from 'vs/base/parts/ipc/node/ipc';
 import { IWatcherRequest, IWatcherService, IWatcherOptions, IWatchError } from './watcher';
@@ -29,7 +27,8 @@ export class WatcherChannel implements IWatcherChannel {
 		switch (event) {
 			case 'watch': return this.service.watch(arg);
 		}
-		throw new Error('No events');
+
+		throw new Error(`Event not found: ${event}`);
 	}
 
 	call(command: string, arg?: any): TPromise<any> {
@@ -38,7 +37,8 @@ export class WatcherChannel implements IWatcherChannel {
 			case 'setVerboseLogging': return this.service.setVerboseLogging(arg);
 			case 'stop': return this.service.stop();
 		}
-		return undefined;
+
+		throw new Error(`Call not found: ${command}`);
 	}
 }
 

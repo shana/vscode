@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import * as assert from 'assert';
 import { FileDecorationsService } from 'vs/workbench/services/decorations/browser/decorationsService';
 import { IDecorationsProvider, IDecorationData } from 'vs/workbench/services/decorations/browser/decorations';
@@ -95,13 +93,16 @@ suite('DecorationsService', function () {
 
 		// un-register -> ensure good event
 		let didSeeEvent = false;
-		let p = toPromise(service.onDidChangeDecorations).then(e => {
-			assert.equal(e.affectsResource(uri), true);
-			assert.deepEqual(service.getDecoration(uri, false), undefined);
-			assert.equal(callCounter, 1);
-			didSeeEvent = true;
+		let p = new Promise(resolve => {
+			service.onDidChangeDecorations(e => {
+				assert.equal(e.affectsResource(uri), true);
+				assert.deepEqual(service.getDecoration(uri, false), undefined);
+				assert.equal(callCounter, 1);
+				didSeeEvent = true;
+				resolve();
+			});
 		});
-		reg.dispose();
+		reg.dispose(); // will clear all data
 		await p;
 		assert.equal(didSeeEvent, true);
 	});
@@ -216,7 +217,6 @@ suite('DecorationsService', function () {
 
 	test('Decorations not bubbling... #48745', function () {
 
-		let resolve: Function;
 		let reg = service.registerDecorationsProvider({
 			label: 'Test',
 			onDidChange: Event.None,
@@ -224,13 +224,10 @@ suite('DecorationsService', function () {
 				if (uri.path.match(/hello$/)) {
 					return { tooltip: 'FOO', weight: 17, bubble: true };
 				} else {
-					return new Promise<IDecorationData>(_resolve => resolve = _resolve);
+					return new Promise<IDecorationData>(_resolve => { });
 				}
 			}
 		});
-		// TODO: TS 3.1 upgrade. Why do we need 'resolve' if it is never actually resolved?
-		// tslint:disable-next-line:no-unused-expression
-		resolve as any;
 
 		let data1 = service.getDecoration(URI.parse('a:b/'), true);
 		assert.ok(!data1);
@@ -243,5 +240,81 @@ suite('DecorationsService', function () {
 
 
 		reg.dispose();
+	});
+
+	test('Folder decorations don\'t go away when file with problems is deleted #61919 (part1)', function () {
+
+		let emitter = new Emitter<URI[]>();
+		let gone = false;
+		let reg = service.registerDecorationsProvider({
+			label: 'Test',
+			onDidChange: emitter.event,
+			provideDecorations(uri: URI) {
+				if (!gone && uri.path.match(/file.ts$/)) {
+					return { tooltip: 'FOO', weight: 17, bubble: true };
+				}
+				return undefined;
+			}
+		});
+
+		let uri = URI.parse('foo:/folder/file.ts');
+		let uri2 = URI.parse('foo:/folder/');
+		let data = service.getDecoration(uri, true);
+		assert.equal(data.tooltip, 'FOO');
+
+		data = service.getDecoration(uri2, true);
+		assert.ok(data.tooltip); // emphazied items...
+
+		gone = true;
+		emitter.fire([uri]);
+
+		data = service.getDecoration(uri, true);
+		assert.equal(data, undefined);
+
+		data = service.getDecoration(uri2, true);
+		assert.equal(data, undefined);
+
+		reg.dispose();
+	});
+
+	test('Folder decorations don\'t go away when file with problems is deleted #61919 (part2)', function () {
+
+		let emitter = new Emitter<URI[]>();
+		let gone = false;
+		let reg = service.registerDecorationsProvider({
+			label: 'Test',
+			onDidChange: emitter.event,
+			provideDecorations(uri: URI) {
+				if (!gone && uri.path.match(/file.ts$/)) {
+					return { tooltip: 'FOO', weight: 17, bubble: true };
+				}
+				return undefined;
+			}
+		});
+
+		let uri = URI.parse('foo:/folder/file.ts');
+		let uri2 = URI.parse('foo:/folder/');
+		let data = service.getDecoration(uri, true);
+		assert.equal(data.tooltip, 'FOO');
+
+		data = service.getDecoration(uri2, true);
+		assert.ok(data.tooltip); // emphazied items...
+
+		return new Promise((resolve, reject) => {
+			let l = service.onDidChangeDecorations(e => {
+				l.dispose();
+				try {
+					assert.ok(e.affectsResource(uri));
+					assert.ok(e.affectsResource(uri2));
+					resolve();
+					reg.dispose();
+				} catch (err) {
+					reject(err);
+					reg.dispose();
+				}
+			});
+			gone = true;
+			emitter.fire([uri]);
+		});
 	});
 });

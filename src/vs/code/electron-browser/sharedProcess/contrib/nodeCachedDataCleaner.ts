@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import { basename, dirname, join } from 'path';
 import { onUnexpectedError } from 'vs/base/common/errors';
@@ -42,7 +41,7 @@ export class NodeCachedDataCleaner {
 		const nodeCachedDataRootDir = dirname(this._environmentService.nodeCachedDataDir);
 		const nodeCachedDataCurrent = basename(this._environmentService.nodeCachedDataDir);
 
-		let handle = setTimeout(() => {
+		let handle: any = setTimeout(() => {
 			handle = undefined;
 
 			readdir(nodeCachedDataRootDir).then(entries => {

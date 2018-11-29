@@ -3,9 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
-import { TPromise } from 'vs/base/common/winjs.base';
 import { ProxyIdentifier } from 'vs/workbench/services/extensions/node/proxyIdentifier';
 import { CharCode } from 'vs/base/common/charCode';
 import { IExtHostContext } from 'vs/workbench/api/node/extHost.protocol';
@@ -13,6 +10,7 @@ import { isThenable } from 'vs/base/common/async';
 
 export function SingleProxyRPCProtocol(thing: any): IExtHostContext {
 	return {
+		remoteAuthority: null,
 		getProxy<T>(): T {
 			return thing;
 		},
@@ -24,6 +22,8 @@ export function SingleProxyRPCProtocol(thing: any): IExtHostContext {
 }
 
 export class TestRPCProtocol implements IExtHostContext {
+
+	public remoteAuthority = null;
 
 	private _callCountValue: number = 0;
 	private _idle: Promise<any>;
@@ -93,10 +93,10 @@ export class TestRPCProtocol implements IExtHostContext {
 		return value;
 	}
 
-	protected _remoteCall(proxyId: string, path: string, args: any[]): TPromise<any> {
+	protected _remoteCall(proxyId: string, path: string, args: any[]): Promise<any> {
 		this._callCount++;
 
-		return new TPromise<any>((c) => {
+		return new Promise<any>((c) => {
 			setTimeout(c, 0);
 		}).then(() => {
 			const instance = this._locals[proxyId];
@@ -105,9 +105,9 @@ export class TestRPCProtocol implements IExtHostContext {
 			let p: Thenable<any>;
 			try {
 				let result = (<Function>instance[path]).apply(instance, wireArgs);
-				p = isThenable(result) ? result : TPromise.as(result);
+				p = isThenable(result) ? result : Promise.resolve(result);
 			} catch (err) {
-				p = TPromise.wrapError(err);
+				p = Promise.reject(err);
 			}
 
 			return p.then(result => {
@@ -117,7 +117,7 @@ export class TestRPCProtocol implements IExtHostContext {
 				return wireResult;
 			}, err => {
 				this._callCount--;
-				return TPromise.wrapError(err);
+				return Promise.reject(err);
 			});
 		});
 	}

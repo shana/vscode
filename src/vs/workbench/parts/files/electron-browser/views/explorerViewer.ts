@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import { TPromise } from 'vs/base/common/winjs.base';
 import * as nls from 'vs/nls';
@@ -544,7 +543,7 @@ export class FileController extends WorkbenchTreeController implements IDisposab
 			getActions: () => {
 				const actions: IAction[] = [];
 				fillInContextMenuActions(this.contributedContextMenu, { arg: stat instanceof ExplorerItem ? stat.resource : {}, shouldForwardArgs: true }, actions, this.contextMenuService);
-				return Promise.resolve(actions);
+				return actions;
 			},
 			onHide: (wasCancelled?: boolean) => {
 				if (wasCancelled) {
@@ -1010,7 +1009,7 @@ export class FileDragAndDrop extends SimpleFileResourceDragAndDrop {
 			return updateConfirmSettingsPromise.then(() => {
 				if (res.confirmed) {
 					const rootDropPromise = this.doHandleRootDrop(sources.filter(s => s.isRoot), target);
-					return TPromise.join(sources.filter(s => !s.isRoot).map(source => this.doHandleExplorerDrop(tree, source, target, isCopy)).concat(rootDropPromise)).then(() => void 0);
+					return Promise.all(sources.filter(s => !s.isRoot).map(source => this.doHandleExplorerDrop(tree, source, target, isCopy)).concat(rootDropPromise)).then(() => void 0);
 				}
 
 				return Promise.resolve(void 0);

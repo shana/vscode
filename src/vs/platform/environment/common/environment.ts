@@ -68,6 +68,7 @@ export interface ParsedArgs {
 	'upload-logs'?: string;
 	'driver'?: string;
 	'driver-verbose'?: boolean;
+	remote?: string;
 }
 
 export const IEnvironmentService = createDecorator<IEnvironmentService>('environmentService');
@@ -102,6 +103,8 @@ export interface IEnvironmentService {
 	settingsSearchBuildId: number;
 	settingsSearchUrl: string;
 
+	workspaceStorageHome: string;
+
 	backupHome: string;
 	backupWorkspacesPath: string;
 
@@ -116,7 +119,6 @@ export interface IEnvironmentService {
 
 	debugExtensionHost: IExtensionHostDebugParams;
 	debugSearch: IDebugParams;
-
 
 	logExtensionHostCommunication: boolean;
 

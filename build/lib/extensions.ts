@@ -15,11 +15,11 @@ import { createStatsStream } from './stats';
 import * as util2 from './util';
 import remote = require('gulp-remote-src');
 const vzip = require('gulp-vinyl-zip');
-const filter = require('gulp-filter');
-const rename = require('gulp-rename');
+import filter = require('gulp-filter');
+import rename = require('gulp-rename');
 const util = require('gulp-util');
 const buffer = require('gulp-buffer');
-const json = require('gulp-json-editor');
+import json = require('gulp-json-editor');
 const webpack = require('webpack');
 const webpackGulp = require('webpack-stream');
 
@@ -34,18 +34,19 @@ function fromLocal(extensionPath: string, sourceMappingURLBase?: string): Stream
 	}
 }
 
-function fromLocalWebpack(extensionPath: string, sourceMappingURLBase: string): Stream {
-	let result = es.through();
+function fromLocalWebpack(extensionPath: string, sourceMappingURLBase: string | undefined): Stream {
+	const result = es.through();
 
-	let packagedDependencies: string[] = [];
-	let packageJsonConfig = require(path.join(extensionPath, 'package.json'));
-	let webpackRootConfig = require(path.join(extensionPath, 'extension.webpack.config.js'));
-	for (const key in webpackRootConfig.externals) {
-		if (key in packageJsonConfig.dependencies) {
-			packagedDependencies.push(key);
+	const packagedDependencies: string[] = [];
+	const packageJsonConfig = require(path.join(extensionPath, 'package.json'));
+	if (Array.isArray(packageJsonConfig.dependencies)) {
+		const webpackRootConfig = require(path.join(extensionPath, 'extension.webpack.config.js'));
+		for (const key in webpackRootConfig.externals) {
+			if (key in packageJsonConfig.dependencies) {
+				packagedDependencies.push(key);
+			}
 		}
 	}
-
 
 	vsce.listFiles({ cwd: extensionPath, packageManager: vsce.PackageManager.Yarn, packagedDependencies }).then(fileNames => {
 		const files = fileNames
@@ -79,9 +80,11 @@ function fromLocalWebpack(extensionPath: string, sourceMappingURLBase: string): 
 		const patchFilesStream = filesStream
 			.pipe(packageJsonFilter)
 			.pipe(buffer())
-			.pipe(json(data => {
-				// hardcoded entry point directory!
-				data.main = data.main.replace('/out/', /dist/);
+			.pipe(json((data: any) => {
+				if (data.main) {
+					// hardcoded entry point directory!
+					data.main = data.main.replace('/out/', /dist/);
+				}
 				return data;
 			}))
 			.pipe(packageJsonFilter.restore);
@@ -89,7 +92,7 @@ function fromLocalWebpack(extensionPath: string, sourceMappingURLBase: string): 
 
 		const webpackStreams = webpackConfigLocations.map(webpackConfigPath => {
 
-			const webpackDone = (err, stats) => {
+			const webpackDone = (err: any, stats: any) => {
 				util.log(`Bundled extension: ${util.colors.yellow(path.join(path.basename(extensionPath), path.relative(extensionPath, webpackConfigPath)))}...`);
 				if (err) {
 					result.emit('error', err);
@@ -107,7 +110,7 @@ function fromLocalWebpack(extensionPath: string, sourceMappingURLBase: string): 
 				...require(webpackConfigPath),
 				...{ mode: 'production' }
 			};
-			let relativeOutputPath = path.relative(extensionPath, webpackConfig.output.path);
+			const relativeOutputPath = path.relative(extensionPath, webpackConfig.output.path);
 
 			return webpackGulp(webpackConfig, webpack, webpackDone)
 				.pipe(es.through(function (data) {
@@ -174,12 +177,6 @@ function fromLocalNormal(extensionPath: string): Stream {
 	return result.pipe(createStatsStream(path.basename(extensionPath)));
 }
 
-function error(err: any): Stream {
-	const result = es.through();
-	setTimeout(() => result.emit('error', err));
-	return result;
-}
-
 const baseHeaders = {
 	'X-Market-Client-Id': 'VSCode Build',
 	'User-Agent': 'VSCode Build',
@@ -205,7 +202,7 @@ export function fromMarketplace(extensionName: string, version: string, metadata
 	return remote('', options)
 		.pipe(vzip.src())
 		.pipe(filter('extension/**'))
-		.pipe(rename(p => p.dirname = p.dirname.replace(/^extension\/?/, '')))
+		.pipe(rename(p => p.dirname = p.dirname!.replace(/^extension\/?/, '')))
 		.pipe(packageJsonFilter)
 		.pipe(buffer())
 		.pipe(json({ __metadata: metadata }))
@@ -249,7 +246,7 @@ function sequence(streamProviders: { (): Stream }[]): Stream {
 		if (streamProviders.length === 0) {
 			result.emit('end');
 		} else {
-			const fn = streamProviders.shift();
+			const fn = streamProviders.shift()!;
 			fn()
 				.on('end', function () { setTimeout(pop, 0); })
 				.pipe(result, { end: false });
@@ -260,8 +257,8 @@ function sequence(streamProviders: { (): Stream }[]): Stream {
 	return result;
 }
 
-export function packageExtensionsStream(opts?: IPackageExtensionsOptions): NodeJS.ReadWriteStream {
-	opts = opts || {};
+export function packageExtensionsStream(optsIn?: IPackageExtensionsOptions): NodeJS.ReadWriteStream {
+	const opts = optsIn || {};
 
 	const localExtensionDescriptions = (<string[]>glob.sync('extensions/*/package.json'))
 		.map(manifestPath => {

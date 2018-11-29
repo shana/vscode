@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import * as path from 'path';
 import {
@@ -109,6 +108,13 @@ class NpmScript extends TreeItem {
 				dark: context.asAbsolutePath(path.join('resources', 'dark', 'script.svg'))
 			};
 		}
+
+		let uri = getPackageJsonUriFromTask(task);
+		getScripts(uri!).then(scripts => {
+			if (scripts && scripts[task.definition['script']]) {
+				this.tooltip = scripts[task.definition['script']];
+			}
+		});
 	}
 
 	getFolder(): WorkspaceFolder {

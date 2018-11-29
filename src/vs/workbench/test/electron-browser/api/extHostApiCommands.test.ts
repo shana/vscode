@@ -3,13 +3,10 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import * as assert from 'assert';
 import { setUnexpectedErrorHandler, errorHandler } from 'vs/base/common/errors';
 import { TestInstantiationService } from 'vs/platform/instantiation/test/common/instantiationServiceMock';
 import { URI } from 'vs/base/common/uri';
-import { TPromise } from 'vs/base/common/winjs.base';
 import * as types from 'vs/workbench/api/node/extHostTypes';
 import { TextModel as EditorModel } from 'vs/editor/common/model/textModel';
 import { TestRPCProtocol } from './testRPCProtocol';
@@ -33,6 +30,7 @@ import { IInstantiationService } from 'vs/platform/instantiation/common/instanti
 import 'vs/workbench/parts/search/electron-browser/search.contribution';
 import { NullLogService } from 'vs/platform/log/common/log';
 import { ITextModel } from 'vs/editor/common/model';
+import { nullExtensionDescription } from 'vs/workbench/services/extensions/common/extensions';
 
 const defaultSelector = { scheme: 'far' };
 const model: ITextModel = EditorModel.createFromString(
@@ -51,6 +49,10 @@ let mainThread: MainThreadLanguageFeatures;
 let commands: ExtHostCommands;
 let disposables: vscode.Disposable[] = [];
 let originalErrorHandler: (e: any) => any;
+
+function assertRejects(fn: () => Thenable<any>, message: string = 'Expected rejection') {
+	return fn().then(() => assert.ok(false, message), _err => assert.ok(true));
+}
 
 suite('ExtHostLanguageFeatureCommands', function () {
 
@@ -147,20 +149,17 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('WorkspaceSymbols, invalid arguments', function () {
 		let promises = [
-			commands.executeCommand('vscode.executeWorkspaceSymbolProvider'),
-			commands.executeCommand('vscode.executeWorkspaceSymbolProvider', null),
-			commands.executeCommand('vscode.executeWorkspaceSymbolProvider', undefined),
-			commands.executeCommand('vscode.executeWorkspaceSymbolProvider', true)
+			assertRejects(() => commands.executeCommand('vscode.executeWorkspaceSymbolProvider')),
+			assertRejects(() => commands.executeCommand('vscode.executeWorkspaceSymbolProvider', null)),
+			assertRejects(() => commands.executeCommand('vscode.executeWorkspaceSymbolProvider', undefined)),
+			assertRejects(() => commands.executeCommand('vscode.executeWorkspaceSymbolProvider', true))
 		];
-
-		return TPromise.join(<any[]>promises).then(undefined, (err: any[]) => {
-			assert.equal(err.length, 4);
-		});
+		return Promise.all(promises);
 	});
 
 	test('WorkspaceSymbols, back and forth', function () {
 
-		disposables.push(extHost.registerWorkspaceSymbolProvider(<vscode.WorkspaceSymbolProvider>{
+		disposables.push(extHost.registerWorkspaceSymbolProvider(nullExtensionDescription, <vscode.WorkspaceSymbolProvider>{
 			provideWorkspaceSymbols(query): any {
 				return [
 					new types.SymbolInformation(query, types.SymbolKind.Array, new types.Range(0, 0, 1, 1), URI.parse('far://testing/first')),
@@ -169,7 +168,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 			}
 		}));
 
-		disposables.push(extHost.registerWorkspaceSymbolProvider(<vscode.WorkspaceSymbolProvider>{
+		disposables.push(extHost.registerWorkspaceSymbolProvider(nullExtensionDescription, <vscode.WorkspaceSymbolProvider>{
 			provideWorkspaceSymbols(query): any {
 				return [
 					new types.SymbolInformation(query, types.SymbolKind.Array, new types.Range(0, 0, 1, 1), URI.parse('far://testing/first'))
@@ -192,7 +191,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('executeWorkspaceSymbolProvider should accept empty string, #39522', async function () {
 
-		disposables.push(extHost.registerWorkspaceSymbolProvider({
+		disposables.push(extHost.registerWorkspaceSymbolProvider(nullExtensionDescription, {
 			provideWorkspaceSymbols(query) {
 				return [new types.SymbolInformation('hello', types.SymbolKind.Array, new types.Range(0, 0, 0, 0), URI.parse('foo:bar'))];
 			}
@@ -211,25 +210,23 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('Definition, invalid arguments', function () {
 		let promises = [
-			commands.executeCommand('vscode.executeDefinitionProvider'),
-			commands.executeCommand('vscode.executeDefinitionProvider', null),
-			commands.executeCommand('vscode.executeDefinitionProvider', undefined),
-			commands.executeCommand('vscode.executeDefinitionProvider', true, false)
+			assertRejects(() => commands.executeCommand('vscode.executeDefinitionProvider')),
+			assertRejects(() => commands.executeCommand('vscode.executeDefinitionProvider', null)),
+			assertRejects(() => commands.executeCommand('vscode.executeDefinitionProvider', undefined)),
+			assertRejects(() => commands.executeCommand('vscode.executeDefinitionProvider', true, false))
 		];
 
-		return TPromise.join(<any[]>promises).then(undefined, (err: any[]) => {
-			assert.equal(err.length, 4);
-		});
+		return Promise.all(promises);
 	});
 
 	test('Definition, back and forth', function () {
 
-		disposables.push(extHost.registerDefinitionProvider(defaultSelector, <vscode.DefinitionProvider>{
+		disposables.push(extHost.registerDefinitionProvider(nullExtensionDescription, defaultSelector, <vscode.DefinitionProvider>{
 			provideDefinition(doc: any): any {
 				return new types.Location(doc.uri, new types.Range(0, 0, 0, 0));
 			}
 		}));
-		disposables.push(extHost.registerDefinitionProvider(defaultSelector, <vscode.DefinitionProvider>{
+		disposables.push(extHost.registerDefinitionProvider(nullExtensionDescription, defaultSelector, <vscode.DefinitionProvider>{
 			provideDefinition(doc: any): any {
 				return [
 					new types.Location(doc.uri, new types.Range(0, 0, 0, 0)),
@@ -254,25 +251,23 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('Type Definition, invalid arguments', function () {
 		const promises = [
-			commands.executeCommand('vscode.executeTypeDefinitionProvider'),
-			commands.executeCommand('vscode.executeTypeDefinitionProvider', null),
-			commands.executeCommand('vscode.executeTypeDefinitionProvider', undefined),
-			commands.executeCommand('vscode.executeTypeDefinitionProvider', true, false)
+			assertRejects(() => commands.executeCommand('vscode.executeTypeDefinitionProvider')),
+			assertRejects(() => commands.executeCommand('vscode.executeTypeDefinitionProvider', null)),
+			assertRejects(() => commands.executeCommand('vscode.executeTypeDefinitionProvider', undefined)),
+			assertRejects(() => commands.executeCommand('vscode.executeTypeDefinitionProvider', true, false))
 		];
 
-		return TPromise.join(<any[]>promises).then(undefined, (err: any[]) => {
-			assert.equal(err.length, 4);
-		});
+		return Promise.all(promises);
 	});
 
 	test('Type Definition, back and forth', function () {
 
-		disposables.push(extHost.registerTypeDefinitionProvider(defaultSelector, <vscode.TypeDefinitionProvider>{
+		disposables.push(extHost.registerTypeDefinitionProvider(nullExtensionDescription, defaultSelector, <vscode.TypeDefinitionProvider>{
 			provideTypeDefinition(doc: any): any {
 				return new types.Location(doc.uri, new types.Range(0, 0, 0, 0));
 			}
 		}));
-		disposables.push(extHost.registerTypeDefinitionProvider(defaultSelector, <vscode.TypeDefinitionProvider>{
+		disposables.push(extHost.registerTypeDefinitionProvider(nullExtensionDescription, defaultSelector, <vscode.TypeDefinitionProvider>{
 			provideTypeDefinition(doc: any): any {
 				return [
 					new types.Location(doc.uri, new types.Range(0, 0, 0, 0)),
@@ -297,7 +292,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('reference search, back and forth', function () {
 
-		disposables.push(extHost.registerReferenceProvider(defaultSelector, <vscode.ReferenceProvider>{
+		disposables.push(extHost.registerReferenceProvider(nullExtensionDescription, defaultSelector, <vscode.ReferenceProvider>{
 			provideReferences(doc: any) {
 				return [
 					new types.Location(URI.parse('some:uri/path'), new types.Range(0, 1, 0, 5))
@@ -319,7 +314,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	// --- outline
 
 	test('Outline, back and forth', function () {
-		disposables.push(extHost.registerDocumentSymbolProvider(defaultSelector, <vscode.DocumentSymbolProvider>{
+		disposables.push(extHost.registerDocumentSymbolProvider(nullExtensionDescription, defaultSelector, <vscode.DocumentSymbolProvider>{
 			provideDocumentSymbols(): any {
 				return [
 					new types.SymbolInformation('testing1', types.SymbolKind.Enum, new types.Range(1, 0, 1, 0)),
@@ -341,14 +336,14 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	});
 
 	test('vscode.executeDocumentSymbolProvider command only returns SymbolInformation[] rather than DocumentSymbol[] #57984', function () {
-		disposables.push(extHost.registerDocumentSymbolProvider(defaultSelector, <vscode.DocumentSymbolProvider>{
+		disposables.push(extHost.registerDocumentSymbolProvider(nullExtensionDescription, defaultSelector, <vscode.DocumentSymbolProvider>{
 			provideDocumentSymbols(): any {
 				return [
 					new types.SymbolInformation('SymbolInformation', types.SymbolKind.Enum, new types.Range(1, 0, 1, 0))
 				];
 			}
 		}));
-		disposables.push(extHost.registerDocumentSymbolProvider(defaultSelector, <vscode.DocumentSymbolProvider>{
+		disposables.push(extHost.registerDocumentSymbolProvider(nullExtensionDescription, defaultSelector, <vscode.DocumentSymbolProvider>{
 			provideDocumentSymbols(): any {
 				let root = new types.DocumentSymbol('DocumentSymbol', 'DocumentSymbol#detail', types.SymbolKind.Enum, new types.Range(1, 0, 1, 0), new types.Range(1, 0, 1, 0));
 				root.children = [new types.DocumentSymbol('DocumentSymbol#child', 'DocumentSymbol#detail#child', types.SymbolKind.Enum, new types.Range(1, 0, 1, 0), new types.Range(1, 0, 1, 0))];
@@ -373,7 +368,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	// --- suggest
 
 	test('Suggest, back and forth', function () {
-		disposables.push(extHost.registerCompletionItemProvider(defaultSelector, <vscode.CompletionItemProvider>{
+		disposables.push(extHost.registerCompletionItemProvider(nullExtensionDescription, defaultSelector, <vscode.CompletionItemProvider>{
 			provideCompletionItems(doc, pos): any {
 				let a = new types.CompletionItem('item1');
 				let b = new types.CompletionItem('item2');
@@ -431,7 +426,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	});
 
 	test('Suggest, return CompletionList !array', function () {
-		disposables.push(extHost.registerCompletionItemProvider(defaultSelector, <vscode.CompletionItemProvider>{
+		disposables.push(extHost.registerCompletionItemProvider(nullExtensionDescription, defaultSelector, <vscode.CompletionItemProvider>{
 			provideCompletionItems(): any {
 				let a = new types.CompletionItem('item1');
 				let b = new types.CompletionItem('item2');
@@ -451,7 +446,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 		let resolveCount = 0;
 
-		disposables.push(extHost.registerCompletionItemProvider(defaultSelector, <vscode.CompletionItemProvider>{
+		disposables.push(extHost.registerCompletionItemProvider(nullExtensionDescription, defaultSelector, <vscode.CompletionItemProvider>{
 			provideCompletionItems(): any {
 				let a = new types.CompletionItem('item1');
 				let b = new types.CompletionItem('item2');
@@ -481,7 +476,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	});
 
 	test('"vscode.executeCompletionItemProvider" doesnot return a preselect field #53749', async function () {
-		disposables.push(extHost.registerCompletionItemProvider(defaultSelector, <vscode.CompletionItemProvider>{
+		disposables.push(extHost.registerCompletionItemProvider(nullExtensionDescription, defaultSelector, <vscode.CompletionItemProvider>{
 			provideCompletionItems(): any {
 				let a = new types.CompletionItem('item1');
 				a.preselect = true;
@@ -513,7 +508,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	});
 
 	test('executeCompletionItemProvider doesn\'t capture commitCharacters #58228', async function () {
-		disposables.push(extHost.registerCompletionItemProvider(defaultSelector, <vscode.CompletionItemProvider>{
+		disposables.push(extHost.registerCompletionItemProvider(nullExtensionDescription, defaultSelector, <vscode.CompletionItemProvider>{
 			provideCompletionItems(): any {
 				let a = new types.CompletionItem('item1');
 				a.commitCharacters = ['a', 'b'];
@@ -542,7 +537,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	// --- quickfix
 
 	test('QuickFix, back and forth', function () {
-		disposables.push(extHost.registerCodeActionProvider(defaultSelector, {
+		disposables.push(extHost.registerCodeActionProvider(nullExtensionDescription, defaultSelector, {
 			provideCodeActions(): vscode.Command[] {
 				return [{ command: 'testing', title: 'Title', arguments: [1, 2, true] }];
 			}
@@ -560,7 +555,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 	});
 
 	test('vscode.executeCodeActionProvider results seem to be missing their `command` property #45124', function () {
-		disposables.push(extHost.registerCodeActionProvider(defaultSelector, {
+		disposables.push(extHost.registerCodeActionProvider(nullExtensionDescription, defaultSelector, {
 			provideCodeActions(document, range): vscode.CodeAction[] {
 				return [{
 					command: {
@@ -598,7 +593,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 			big: extHost
 		};
 
-		disposables.push(extHost.registerCodeLensProvider(defaultSelector, <vscode.CodeLensProvider>{
+		disposables.push(extHost.registerCodeLensProvider(nullExtensionDescription, defaultSelector, <vscode.CodeLensProvider>{
 			provideCodeLenses(): any {
 				return [new types.CodeLens(new types.Range(0, 0, 1, 1), { title: 'Title', command: 'cmd', arguments: [1, true, complexArg] })];
 			}
@@ -622,7 +617,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 		let resolveCount = 0;
 
-		disposables.push(extHost.registerCodeLensProvider(defaultSelector, <vscode.CodeLensProvider>{
+		disposables.push(extHost.registerCodeLensProvider(nullExtensionDescription, defaultSelector, <vscode.CodeLensProvider>{
 			provideCodeLenses(): any {
 				return [
 					new types.CodeLens(new types.Range(0, 0, 1, 1)),
@@ -654,7 +649,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('Links, back and forth', function () {
 
-		disposables.push(extHost.registerDocumentLinkProvider(defaultSelector, <vscode.DocumentLinkProvider>{
+		disposables.push(extHost.registerDocumentLinkProvider(nullExtensionDescription, defaultSelector, <vscode.DocumentLinkProvider>{
 			provideDocumentLinks(): any {
 				return [new types.DocumentLink(new types.Range(0, 0, 0, 20), URI.parse('foo:bar'))];
 			}
@@ -677,7 +672,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('Color provider', function () {
 
-		disposables.push(extHost.registerColorProvider(defaultSelector, <vscode.DocumentColorProvider>{
+		disposables.push(extHost.registerColorProvider(nullExtensionDescription, defaultSelector, <vscode.DocumentColorProvider>{
 			provideDocumentColors(): vscode.ColorInformation[] {
 				return [new types.ColorInformation(new types.Range(0, 0, 0, 20), new types.Color(0.1, 0.2, 0.3, 0.4))];
 			},
@@ -727,7 +722,7 @@ suite('ExtHostLanguageFeatureCommands', function () {
 
 	test('"TypeError: e.onCancellationRequested is not a function" calling hover provider in Insiders #54174', function () {
 
-		disposables.push(extHost.registerHoverProvider(defaultSelector, <vscode.HoverProvider>{
+		disposables.push(extHost.registerHoverProvider(nullExtensionDescription, defaultSelector, <vscode.HoverProvider>{
 			provideHover(): any {
 				return new types.Hover('fofofofo');
 			}

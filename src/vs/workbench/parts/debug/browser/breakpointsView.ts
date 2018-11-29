@@ -16,9 +16,8 @@ import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { Constants } from 'vs/editor/common/core/uint';
 import { dispose, IDisposable } from 'vs/base/common/lifecycle';
-import { TPromise } from 'vs/base/common/winjs.base';
 import { Separator } from 'vs/base/browser/ui/actionbar/actionbar';
-import { IVirtualDelegate, IListContextMenuEvent, IRenderer } from 'vs/base/browser/ui/list/list';
+import { IListVirtualDelegate, IListContextMenuEvent, IListRenderer } from 'vs/base/browser/ui/list/list';
 import { IEditor } from 'vs/workbench/common/editor';
 import { InputBox } from 'vs/base/browser/ui/inputbox/inputBox';
 import { IKeyboardEvent } from 'vs/base/browser/keyboardEvent';
@@ -45,8 +44,6 @@ function createCheckbox(): HTMLInputElement {
 export class BreakpointsView extends ViewletPanel {
 
 	private static readonly MAX_VISIBLE_FILES = 9;
-	private static readonly MEMENTO = 'breakopintsview.memento';
-	private settings: any;
 	private list: WorkbenchList<IEnablement>;
 	private needsRefresh: boolean;
 
@@ -64,7 +61,6 @@ export class BreakpointsView extends ViewletPanel {
 		super({ ...(options as IViewletPanelOptions), ariaHeaderLabel: nls.localize('breakpointsSection', "Breakpoints Section") }, keybindingService, contextMenuService, configurationService);
 
 		this.minimumBodySize = this.maximumBodySize = this.getExpandedBodySize();
-		this.settings = options.viewletSettings;
 		this.disposables.push(this.debugService.getModel().onDidChangeBreakpoints(() => this.onBreakpointsChange()));
 	}
 
@@ -175,7 +171,7 @@ export class BreakpointsView extends ViewletPanel {
 
 		this.contextMenuService.showContextMenu({
 			getAnchor: () => e.anchor,
-			getActions: () => Promise.resolve(actions),
+			getActions: () => actions,
 			getActionsContext: () => element
 		});
 	}
@@ -195,12 +191,11 @@ export class BreakpointsView extends ViewletPanel {
 		}
 	}
 
-	public setVisible(visible: boolean): TPromise<void> {
-		return super.setVisible(visible).then(() => {
-			if (visible && this.needsRefresh) {
-				this.onBreakpointsChange();
-			}
-		});
+	public setVisible(visible: boolean): void {
+		super.setVisible(visible);
+		if (visible && this.needsRefresh) {
+			this.onBreakpointsChange();
+		}
 	}
 
 	private onBreakpointsChange(): void {
@@ -230,13 +225,9 @@ export class BreakpointsView extends ViewletPanel {
 		const length = model.getBreakpoints().length + model.getExceptionBreakpoints().length + model.getFunctionBreakpoints().length;
 		return Math.min(BreakpointsView.MAX_VISIBLE_FILES, length) * 22;
 	}
-
-	public shutdown(): void {
-		this.settings[BreakpointsView.MEMENTO] = !this.isExpanded();
-	}
 }
 
-class BreakpointsDelegate implements IVirtualDelegate<IEnablement> {
+class BreakpointsDelegate implements IListVirtualDelegate<IEnablement> {
 
 	constructor(private debugService: IDebugService) {
 		// noop
@@ -292,7 +283,7 @@ interface IInputTemplateData {
 	toDispose: IDisposable[];
 }
 
-class BreakpointsRenderer implements IRenderer<IBreakpoint, IBreakpointTemplateData> {
+class BreakpointsRenderer implements IListRenderer<IBreakpoint, IBreakpointTemplateData> {
 
 	constructor(
 		@IDebugService private debugService: IDebugService,
@@ -361,7 +352,7 @@ class BreakpointsRenderer implements IRenderer<IBreakpoint, IBreakpointTemplateD
 	}
 }
 
-class ExceptionBreakpointsRenderer implements IRenderer<IExceptionBreakpoint, IBaseBreakpointTemplateData> {
+class ExceptionBreakpointsRenderer implements IListRenderer<IExceptionBreakpoint, IBaseBreakpointTemplateData> {
 
 	constructor(
 		private debugService: IDebugService
@@ -409,7 +400,7 @@ class ExceptionBreakpointsRenderer implements IRenderer<IExceptionBreakpoint, IB
 	}
 }
 
-class FunctionBreakpointsRenderer implements IRenderer<FunctionBreakpoint, IBaseBreakpointWithIconTemplateData> {
+class FunctionBreakpointsRenderer implements IListRenderer<FunctionBreakpoint, IBaseBreakpointWithIconTemplateData> {
 
 	constructor(
 		@IDebugService private debugService: IDebugService
@@ -468,7 +459,7 @@ class FunctionBreakpointsRenderer implements IRenderer<FunctionBreakpoint, IBase
 	}
 }
 
-class FunctionBreakpointInputRenderer implements IRenderer<IFunctionBreakpoint, IInputTemplateData> {
+class FunctionBreakpointInputRenderer implements IListRenderer<IFunctionBreakpoint, IInputTemplateData> {
 
 	constructor(
 		private debugService: IDebugService,
@@ -561,7 +552,7 @@ class FunctionBreakpointInputRenderer implements IRenderer<IFunctionBreakpoint, 
 	}
 }
 
-export function openBreakpointSource(breakpoint: IBreakpoint, sideBySide: boolean, preserveFocus: boolean, debugService: IDebugService, editorService: IEditorService): TPromise<IEditor> {
+export function openBreakpointSource(breakpoint: IBreakpoint, sideBySide: boolean, preserveFocus: boolean, debugService: IDebugService, editorService: IEditorService): Thenable<IEditor> {
 	if (breakpoint.uri.scheme === DEBUG_SCHEME && debugService.state === State.Inactive) {
 		return Promise.resolve(null);
 	}
@@ -626,7 +617,7 @@ export function getBreakpointMessageAndClassName(debugService: IDebugService, br
 	}
 
 	if (breakpoint.logMessage || breakpoint.condition || breakpoint.hitCondition) {
-		const messages = [];
+		const messages: string[] = [];
 		if (breakpoint.logMessage) {
 			if (session && !session.capabilities.supportsLogPoints) {
 				return {

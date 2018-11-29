@@ -2,13 +2,11 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import * as nls from 'vs/nls';
 import * as Objects from 'vs/base/common/objects';
 import * as Types from 'vs/base/common/types';
 import * as Platform from 'vs/base/common/platform';
-import { TPromise, Promise } from 'vs/base/common/winjs.base';
 import * as Async from 'vs/base/common/async';
 import Severity from 'vs/base/common/severity';
 import * as Strings from 'vs/base/common/strings';
@@ -52,7 +50,7 @@ export class ProcessTaskSystem implements ITaskSystem {
 	private errorsShown: boolean;
 	private childProcess: LineProcess;
 	private activeTask: CustomTask;
-	private activeTaskPromise: TPromise<ITaskSummary>;
+	private activeTaskPromise: Promise<ITaskSummary>;
 
 	private readonly _onDidStateChange: Emitter<TaskEvent>;
 
@@ -76,8 +74,8 @@ export class ProcessTaskSystem implements ITaskSystem {
 		return this._onDidStateChange.event;
 	}
 
-	public isActive(): TPromise<boolean> {
-		return TPromise.as(!!this.childProcess);
+	public isActive(): Promise<boolean> {
+		return Promise.resolve(!!this.childProcess);
 	}
 
 	public isActiveSync(): boolean {
@@ -118,14 +116,14 @@ export class ProcessTaskSystem implements ITaskSystem {
 		return true;
 	}
 
-	public terminate(task: Task): TPromise<TaskTerminateResponse> {
+	public terminate(task: Task): Promise<TaskTerminateResponse> {
 		if (!this.activeTask || Task.getMapKey(this.activeTask) !== Task.getMapKey(task)) {
-			return TPromise.as<TaskTerminateResponse>({ success: false, task: undefined });
+			return Promise.resolve<TaskTerminateResponse>({ success: false, task: undefined });
 		}
 		return this.terminateAll().then(values => values[0]);
 	}
 
-	public terminateAll(): TPromise<TaskTerminateResponse[]> {
+	public terminateAll(): Promise<TaskTerminateResponse[]> {
 		if (this.childProcess) {
 			let task = this.activeTask;
 			return this.childProcess.terminate().then((response) => {
@@ -134,7 +132,7 @@ export class ProcessTaskSystem implements ITaskSystem {
 				return [result];
 			});
 		}
-		return TPromise.as<TaskTerminateResponse[]>([{ success: true, task: undefined }]);
+		return Promise.resolve<TaskTerminateResponse[]>([{ success: true, task: undefined }]);
 	}
 
 	private executeTask(task: Task, trigger: string = Triggers.command): ITaskExecuteResult {
@@ -170,7 +168,7 @@ export class ProcessTaskSystem implements ITaskSystem {
 					}
 				*/
 				this.telemetryService.publicLog(ProcessTaskSystem.TelemetryEventName, telemetryEvent);
-				return TPromise.wrapError<ITaskSummary>(err);
+				return Promise.reject<ITaskSummary>(err);
 			});
 			return result;
 		} catch (err) {
@@ -357,7 +355,7 @@ export class ProcessTaskSystem implements ITaskSystem {
 		this.activeTaskPromise = null;
 	}
 
-	private handleError(task: CustomTask, errorData: ErrorData): Promise {
+	private handleError(task: CustomTask, errorData: ErrorData): Promise<ITaskSummary> {
 		let makeVisible = false;
 		if (errorData.error && !errorData.terminated) {
 			let args: string = task.command.args ? task.command.args.join(' ') : '';
@@ -383,7 +381,7 @@ export class ProcessTaskSystem implements ITaskSystem {
 		error.stderr = errorData.stderr;
 		error.stdout = errorData.stdout;
 		error.terminated = errorData.terminated;
-		return TPromise.wrapError(error);
+		return Promise.reject(error);
 	}
 
 	private checkTerminated(task: Task, data: SuccessData | ErrorData): boolean {

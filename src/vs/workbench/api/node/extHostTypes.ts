@@ -2,7 +2,6 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
 import * as crypto from 'crypto';
 
@@ -18,10 +17,11 @@ import { coalesce, equals } from 'vs/base/common/arrays';
 
 export class Disposable {
 
-	static from(...disposables: { dispose(): any }[]): Disposable {
+	static from(...inDisposables: { dispose(): any }[]): Disposable {
+		let disposables: ReadonlyArray<{ dispose(): any }> | undefined = inDisposables;
 		return new Disposable(function () {
 			if (disposables) {
-				for (let disposable of disposables) {
+				for (const disposable of disposables) {
 					if (disposable && typeof disposable.dispose === 'function') {
 						disposable.dispose();
 					}
@@ -31,7 +31,7 @@ export class Disposable {
 		});
 	}
 
-	private _callOnDispose: Function;
+	private _callOnDispose?: Function;
 
 	constructor(callOnDispose: Function) {
 		this._callOnDispose = callOnDispose;
@@ -48,9 +48,13 @@ export class Disposable {
 export class Position {
 
 	static Min(...positions: Position[]): Position {
-		let result = positions.pop();
-		for (let p of positions) {
-			if (p.isBefore(result)) {
+		if (positions.length === 0) {
+			throw new TypeError();
+		}
+		let result = positions[0];
+		for (let i = 1; i < positions.length; i++) {
+			let p = positions[i];
+			if (p.isBefore(result!)) {
 				result = p;
 			}
 		}
@@ -58,9 +62,13 @@ export class Position {
 	}
 
 	static Max(...positions: Position[]): Position {
-		let result = positions.pop();
-		for (let p of positions) {
-			if (p.isAfter(result)) {
+		if (positions.length === 0) {
+			throw new TypeError();
+		}
+		let result = positions[0];
+		for (let i = 1; i < positions.length; i++) {
+			let p = positions[i];
+			if (p.isAfter(result!)) {
 				result = p;
 			}
 		}
@@ -155,7 +163,7 @@ export class Position {
 
 	translate(change: { lineDelta?: number; characterDelta?: number; }): Position;
 	translate(lineDelta?: number, characterDelta?: number): Position;
-	translate(lineDeltaOrChange: number | { lineDelta?: number; characterDelta?: number; }, characterDelta: number = 0): Position {
+	translate(lineDeltaOrChange: number | undefined | { lineDelta?: number; characterDelta?: number; }, characterDelta: number = 0): Position {
 
 		if (lineDeltaOrChange === null || characterDelta === null) {
 			throw illegalArgument();
@@ -179,7 +187,7 @@ export class Position {
 
 	with(change: { line?: number; character?: number; }): Position;
 	with(line?: number, character?: number): Position;
-	with(lineOrChange: number | { line?: number; character?: number; }, character: number = this.character): Position {
+	with(lineOrChange: number | undefined | { line?: number; character?: number; }, character: number = this.character): Position {
 
 		if (lineOrChange === null || character === null) {
 			throw illegalArgument();
@@ -235,8 +243,8 @@ export class Range {
 	constructor(start: Position, end: Position);
 	constructor(startLine: number, startColumn: number, endLine: number, endColumn: number);
 	constructor(startLineOrStart: number | Position, startColumnOrEnd: number | Position, endLine?: number, endColumn?: number) {
-		let start: Position;
-		let end: Position;
+		let start: Position | undefined;
+		let end: Position | undefined;
 
 		if (typeof startLineOrStart === 'number' && typeof startColumnOrEnd === 'number' && typeof endLine === 'number' && typeof endColumn === 'number') {
 			start = new Position(startLineOrStart, startColumnOrEnd);
@@ -280,7 +288,7 @@ export class Range {
 		return this._start.isEqual(other._start) && this._end.isEqual(other._end);
 	}
 
-	intersection(other: Range): Range {
+	intersection(other: Range): Range | undefined {
 		let start = Position.Max(other.start, this._start);
 		let end = Position.Min(other.end, this._end);
 		if (start.isAfter(end)) {
@@ -313,7 +321,7 @@ export class Range {
 
 	with(change: { start?: Position, end?: Position }): Range;
 	with(start?: Position, end?: Position): Range;
-	with(startOrChange: Position | { start?: Position, end?: Position }, end: Position = this.end): Range {
+	with(startOrChange: Position | undefined | { start?: Position, end?: Position }, end: Position = this.end): Range {
 
 		if (startOrChange === null || end === null) {
 			throw illegalArgument();
@@ -372,8 +380,8 @@ export class Selection extends Range {
 	constructor(anchor: Position, active: Position);
 	constructor(anchorLine: number, anchorColumn: number, activeLine: number, activeColumn: number);
 	constructor(anchorLineOrAnchor: number | Position, anchorColumnOrActive: number | Position, activeLine?: number, activeColumn?: number) {
-		let anchor: Position;
-		let active: Position;
+		let anchor: Position | undefined;
+		let active: Position | undefined;
 
 		if (typeof anchorLineOrAnchor === 'number' && typeof anchorColumnOrActive === 'number' && typeof activeLine === 'number' && typeof activeColumn === 'number') {
 			anchor = new Position(anchorLineOrAnchor, anchorColumnOrActive);
@@ -578,9 +586,6 @@ export class WorkspaceEdit implements vscode.WorkspaceEdit {
 			if (candidate._type === 2 && candidate.uri.toString() === uri.toString()) {
 				res.push(candidate.edit);
 			}
-		}
-		if (res.length === 0) {
-			return undefined;
 		}
 		return res;
 	}
@@ -811,7 +816,7 @@ export class Diagnostic {
 		};
 	}
 
-	static isEqual(a: Diagnostic, b: Diagnostic): boolean {
+	static isEqual(a: Diagnostic | undefined, b: Diagnostic | undefined): boolean {
 		if (a === b) {
 			return true;
 		}
@@ -832,7 +837,7 @@ export class Diagnostic {
 export class Hover {
 
 	public contents: vscode.MarkdownString[] | vscode.MarkedString[];
-	public range: Range;
+	public range: Range | undefined;
 
 	constructor(
 		contents: vscode.MarkdownString | vscode.MarkedString | vscode.MarkdownString[] | vscode.MarkedString[],
@@ -907,10 +912,16 @@ export enum SymbolKind {
 
 export class SymbolInformation {
 
+	static validate(candidate: SymbolInformation): void {
+		if (!candidate.name) {
+			throw new Error('name must not be falsy');
+		}
+	}
+
 	name: string;
 	location: Location;
 	kind: SymbolKind;
-	containerName: string;
+	containerName: string | undefined;
 
 	constructor(name: string, kind: SymbolKind, containerName: string, location: Location);
 	constructor(name: string, kind: SymbolKind, range: Range, uri?: URI, containerName?: string);
@@ -928,6 +939,8 @@ export class SymbolInformation {
 		} else if (rangeOrContainer instanceof Range) {
 			this.location = new Location(locationOrUri, rangeOrContainer);
 		}
+
+		SymbolInformation.validate(this);
 	}
 
 	toJSON(): any {
@@ -941,6 +954,19 @@ export class SymbolInformation {
 }
 
 export class DocumentSymbol {
+
+	static validate(candidate: DocumentSymbol): void {
+		if (!candidate.name) {
+			throw new Error('name must not be falsy');
+		}
+		if (!candidate.range.contains(candidate.selectionRange)) {
+			throw new Error('selectionRange must be contained in fullRange');
+		}
+		if (candidate.children) {
+			candidate.children.forEach(DocumentSymbol.validate);
+		}
+	}
+
 	name: string;
 	detail: string;
 	kind: SymbolKind;
@@ -956,9 +982,7 @@ export class DocumentSymbol {
 		this.selectionRange = selectionRange;
 		this.children = [];
 
-		if (!this.range.contains(this.selectionRange)) {
-			throw new Error('selectionRange must be contained in fullRange');
-		}
+		DocumentSymbol.validate(this);
 	}
 }
 
@@ -1016,7 +1040,7 @@ export class CodeLens {
 
 	range: Range;
 
-	command: vscode.Command;
+	command: vscode.Command | undefined;
 
 	constructor(range: Range, command?: vscode.Command) {
 		this.range = range;
@@ -1060,10 +1084,10 @@ export class MarkdownString {
 
 export class ParameterInformation {
 
-	label: string;
+	label: string | [number, number];
 	documentation?: string | MarkdownString;
 
-	constructor(label: string, documentation?: string | MarkdownString) {
+	constructor(label: string | [number, number], documentation?: string | MarkdownString) {
 		this.label = label;
 		this.documentation = documentation;
 	}
@@ -1096,7 +1120,7 @@ export class SignatureHelp {
 export enum SignatureHelpTriggerReason {
 	Invoke = 1,
 	TriggerCharacter = 2,
-	Retrigger = 3,
+	ContentChange = 3,
 }
 
 export enum CompletionTriggerKind {
@@ -1138,16 +1162,21 @@ export enum CompletionItemKind {
 	TypeParameter = 24
 }
 
+export enum CompletionItemInsertTextRule {
+	KeepWhitespace = 0b1
+}
+
 export class CompletionItem implements vscode.CompletionItem {
 
 	label: string;
-	kind: CompletionItemKind;
+	kind: CompletionItemKind | undefined;
 	detail: string;
 	documentation: string | MarkdownString;
 	sortText: string;
 	filterText: string;
 	preselect: boolean;
 	insertText: string | SnippetString;
+	insertTextRules: CompletionItemInsertTextRule;
 	range: Range;
 	commitCharacters: string[];
 	textEdit: TextEdit;
@@ -1162,7 +1191,7 @@ export class CompletionItem implements vscode.CompletionItem {
 	toJSON(): any {
 		return {
 			label: this.label,
-			kind: CompletionItemKind[this.kind],
+			kind: this.kind && CompletionItemKind[this.kind],
 			detail: this.detail,
 			documentation: this.documentation,
 			sortText: this.sortText,
@@ -1767,16 +1796,16 @@ export enum ProgressLocation {
 
 export class TreeItem {
 
-	label?: string;
+	label?: string | vscode.TreeItemLabel;
 	resourceUri?: URI;
 	iconPath?: string | URI | { light: string | URI; dark: string | URI };
 	command?: vscode.Command;
 	contextValue?: string;
 	tooltip?: string;
 
-	constructor(label: string, collapsibleState?: vscode.TreeItemCollapsibleState)
+	constructor(label: string | vscode.TreeItemLabel, collapsibleState?: vscode.TreeItemCollapsibleState)
 	constructor(resourceUri: URI, collapsibleState?: vscode.TreeItemCollapsibleState)
-	constructor(arg1: string | URI, public collapsibleState: vscode.TreeItemCollapsibleState = TreeItemCollapsibleState.None) {
+	constructor(arg1: string | vscode.TreeItemLabel | URI, public collapsibleState: vscode.TreeItemCollapsibleState = TreeItemCollapsibleState.None) {
 		if (arg1 instanceof URI) {
 			this.resourceUri = arg1;
 		} else {

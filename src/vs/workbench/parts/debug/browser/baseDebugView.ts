@@ -133,6 +133,8 @@ export function renderRenameBox(debugService: IDebugService, contextViewService:
 	inputBox.value = options.initialValue ? options.initialValue : '';
 	inputBox.focus();
 	inputBox.select();
+	tree.clearFocus();
+	tree.clearSelection();
 
 	let disposed = false;
 	const toDispose: IDisposable[] = [inputBox, styler];
@@ -216,10 +218,11 @@ export class BaseDebugController extends WorkbenchTreeController {
 			const anchor = { x: event.posx, y: event.posy };
 			this.contextMenuService.showContextMenu({
 				getAnchor: () => anchor,
-				getActions: () => this.actionProvider.getSecondaryActions(tree, element).then(actions => {
+				getActions: () => {
+					const actions = this.actionProvider.getSecondaryActions(tree, element);
 					fillInContextMenuActions(this.contributedContextMenu, { arg: this.getContext(element) }, actions, this.contextMenuService);
 					return actions;
-				}),
+				},
 				onHide: (wasCancelled?: boolean) => {
 					if (wasCancelled) {
 						tree.domFocus();

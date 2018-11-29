@@ -7,7 +7,6 @@ import * as nls from 'vs/nls';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import * as dom from 'vs/base/browser/dom';
 import { IDisposable, dispose } from 'vs/base/common/lifecycle';
-import { TPromise } from 'vs/base/common/winjs.base';
 import { IActionProvider, ITree, IDataSource, IRenderer, IAccessibilityProvider, IDragAndDropData, IDragOverReaction, DRAG_OVER_REJECT } from 'vs/base/parts/tree/browser/tree';
 import { CollapseAction } from 'vs/workbench/browser/viewlet';
 import { TreeViewsViewletPanel, IViewletViewOptions } from 'vs/workbench/browser/parts/views/viewsViewlet';
@@ -35,10 +34,8 @@ const MAX_VALUE_RENDER_LENGTH_IN_VIEWLET = 1024;
 
 export class WatchExpressionsView extends TreeViewsViewletPanel {
 
-	private static readonly MEMENTO = 'watchexpressionsview.memento';
 	private onWatchExpressionsUpdatedScheduler: RunOnceScheduler;
 	private treeContainer: HTMLElement;
-	private settings: any;
 	private needsRefresh: boolean;
 
 	constructor(
@@ -50,7 +47,6 @@ export class WatchExpressionsView extends TreeViewsViewletPanel {
 		@IConfigurationService configurationService: IConfigurationService
 	) {
 		super({ ...(options as IViewletPanelOptions), ariaHeaderLabel: nls.localize('watchExpressionsSection', "Watch Expressions Section") }, keybindingService, contextMenuService, configurationService);
-		this.settings = options.viewletSettings;
 
 		this.onWatchExpressionsUpdatedScheduler = new RunOnceScheduler(() => {
 			this.needsRefresh = false;
@@ -125,17 +121,11 @@ export class WatchExpressionsView extends TreeViewsViewletPanel {
 		}
 	}
 
-	public setVisible(visible: boolean): TPromise<void> {
-		return super.setVisible(visible).then(() => {
-			if (visible && this.needsRefresh) {
-				this.onWatchExpressionsUpdatedScheduler.schedule();
-			}
-		});
-	}
-
-	public shutdown(): void {
-		this.settings[WatchExpressionsView.MEMENTO] = !this.isExpanded();
-		super.shutdown();
+	public setVisible(visible: boolean): void {
+		super.setVisible(visible);
+		if (visible && this.needsRefresh) {
+			this.onWatchExpressionsUpdatedScheduler.schedule();
+		}
 	}
 }
 
@@ -154,11 +144,11 @@ class WatchExpressionsActionProvider implements IActionProvider {
 		return true;
 	}
 
-	public getActions(tree: ITree, element: any): TPromise<IAction[]> {
-		return Promise.resolve([]);
+	public getActions(tree: ITree, element: any): IAction[] {
+		return [];
 	}
 
-	public getSecondaryActions(tree: ITree, element: any): TPromise<IAction[]> {
+	public getSecondaryActions(tree: ITree, element: any): IAction[] {
 		const actions: IAction[] = [];
 		if (element instanceof Expression) {
 			const expression = <Expression>element;
@@ -183,7 +173,7 @@ class WatchExpressionsActionProvider implements IActionProvider {
 			actions.push(new RemoveAllWatchExpressionsAction(RemoveAllWatchExpressionsAction.ID, RemoveAllWatchExpressionsAction.LABEL, this.debugService, this.keybindingService));
 		}
 
-		return Promise.resolve(actions);
+		return actions;
 	}
 
 	public getActionItem(tree: ITree, element: any, action: IAction): IActionItem {
@@ -210,10 +200,10 @@ class WatchExpressionsDataSource implements IDataSource {
 		return watchExpression.hasChildren && !equalsIgnoreCase(watchExpression.value, 'null');
 	}
 
-	public getChildren(tree: ITree, element: any): TPromise<any> {
+	public getChildren(tree: ITree, element: any): Promise<any> {
 		if (element instanceof DebugModel) {
 			const viewModel = this.debugService.getViewModel();
-			return TPromise.join(element.getWatchExpressions().map(we =>
+			return Promise.all(element.getWatchExpressions().map(we =>
 				we.name ? we.evaluate(viewModel.focusedSession, viewModel.focusedStackFrame, 'watch').then(() => we) : Promise.resolve(we)));
 		}
 
@@ -221,7 +211,7 @@ class WatchExpressionsDataSource implements IDataSource {
 		return expression.getChildren();
 	}
 
-	public getParent(tree: ITree, element: any): TPromise<any> {
+	public getParent(tree: ITree, element: any): Promise<any> {
 		return Promise.resolve(null);
 	}
 }

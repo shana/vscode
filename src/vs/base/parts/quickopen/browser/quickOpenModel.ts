@@ -3,10 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import * as nls from 'vs/nls';
-import { TPromise } from 'vs/base/common/winjs.base';
 import * as types from 'vs/base/common/types';
 import { URI } from 'vs/base/common/uri';
 import { ITree, IActionProvider } from 'vs/base/parts/tree/browser/tree';
@@ -291,16 +288,16 @@ class NoActionProvider implements IActionProvider {
 		return false;
 	}
 
-	getActions(tree: ITree, element: any): TPromise<IAction[]> {
-		return TPromise.as(null);
+	getActions(tree: ITree, element: any): IAction[] {
+		return null;
 	}
 
 	hasSecondaryActions(tree: ITree, element: any): boolean {
 		return false;
 	}
 
-	getSecondaryActions(tree: ITree, element: any): TPromise<IAction[]> {
-		return TPromise.as(null);
+	getSecondaryActions(tree: ITree, element: any): IAction[] {
+		return null;
 	}
 
 	getActionItem(tree: ITree, element: any, action: Action): IActionItem {
@@ -330,7 +327,7 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 	private actionProvider: IActionProvider;
 	private actionRunner: IActionRunner;
 
-	constructor(actionProvider: IActionProvider = new NoActionProvider(), actionRunner: IActionRunner = null) {
+	constructor(actionProvider: IActionProvider = new NoActionProvider(), actionRunner: IActionRunner | null = null) {
 		this.actionProvider = actionProvider;
 		this.actionRunner = actionRunner;
 	}
@@ -379,7 +376,7 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 		const detailContainer = document.createElement('div');
 		row2.appendChild(detailContainer);
 		DOM.addClass(detailContainer, 'quick-open-entry-meta');
-		const detail = new HighlightedLabel(detailContainer);
+		const detail = new HighlightedLabel(detailContainer, true);
 
 		// Entry Group
 		let group: HTMLDivElement;
@@ -423,13 +420,12 @@ class Renderer implements IRenderer<QuickOpenEntry> {
 
 		data.actionBar.context = entry; // make sure the context is the current element
 
-		this.actionProvider.getActions(null, entry).then((actions) => {
-			if (data.actionBar.isEmpty() && actions && actions.length > 0) {
-				data.actionBar.push(actions, { icon: true, label: false });
-			} else if (!data.actionBar.isEmpty() && (!actions || actions.length === 0)) {
-				data.actionBar.clear();
-			}
-		});
+		const actions = this.actionProvider.getActions(null, entry);
+		if (data.actionBar.isEmpty() && actions && actions.length > 0) {
+			data.actionBar.push(actions, { icon: true, label: false });
+		} else if (!data.actionBar.isEmpty() && (!actions || actions.length === 0)) {
+			data.actionBar.clear();
+		}
 
 		// Entry group class
 		if (entry instanceof QuickOpenEntryGroup && entry.getGroupLabel()) {

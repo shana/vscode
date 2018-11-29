@@ -2,9 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-'use strict';
 
-import { TPromise } from 'vs/base/common/winjs.base';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { Action, IAction } from 'vs/base/common/actions';
 import { BaseActionItem, Separator } from 'vs/base/browser/ui/actionbar/actionbar';
@@ -93,7 +91,7 @@ export class ContributableActionProvider implements IActionProvider {
 		return false;
 	}
 
-	getActions(tree: ITree, element: any): TPromise<IAction[]> {
+	getActions(tree: ITree, element: any): IAction[] {
 		const actions: IAction[] = [];
 		const context = this.toContext(tree, element);
 
@@ -106,7 +104,7 @@ export class ContributableActionProvider implements IActionProvider {
 			}
 		}
 
-		return Promise.resolve(prepareActions(actions));
+		return prepareActions(actions);
 	}
 
 	hasSecondaryActions(tree: ITree, element: any): boolean {
@@ -123,7 +121,7 @@ export class ContributableActionProvider implements IActionProvider {
 		return false;
 	}
 
-	getSecondaryActions(tree: ITree, element: any): TPromise<IAction[]> {
+	getSecondaryActions(tree: ITree, element: any): IAction[] {
 		const actions: IAction[] = [];
 		const context = this.toContext(tree, element);
 
@@ -136,7 +134,7 @@ export class ContributableActionProvider implements IActionProvider {
 			}
 		}
 
-		return Promise.resolve(prepareActions(actions));
+		return prepareActions(actions);
 	}
 
 	getActionItem(tree: ITree, element: any, action: Action): BaseActionItem {

@@ -13,6 +13,7 @@ steps:
     yarn
     yarn gulp -- hygiene
     yarn monaco-compile-check
+    yarn strict-null-check
     VSCODE_MIXIN_PASSWORD="$(VSCODE_MIXIN_PASSWORD)" yarn gulp -- mixin
     node build/tfs/common/installDistro.js
     node build/lib/builtInExtensions.js
@@ -84,3 +85,6 @@ steps:
     AZURE_STORAGE_ACCESS_KEY="$(AZURE_STORAGE_ACCESS_KEY)" \
     yarn gulp -- upload-vscode-configuration
   displayName: Publish
+
+- task: ms.vss-governance-buildtask.governance-build-task-component-detection.ComponentGovernanceComponentDetection@0
+  displayName: 'Component Detection'

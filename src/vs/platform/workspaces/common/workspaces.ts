@@ -3,8 +3,6 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-'use strict';
-
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { TPromise } from 'vs/base/common/winjs.base';
 import { localize } from 'vs/nls';
@@ -87,9 +85,9 @@ export interface IWorkspacesMainService extends IWorkspacesService {
 
 	createWorkspaceSync(folders?: IWorkspaceFolderCreationData[]): IWorkspaceIdentifier;
 
-	resolveWorkspace(path: string): TPromise<IResolvedWorkspace>;
+	resolveWorkspace(path: string): TPromise<IResolvedWorkspace | null>;
 
-	resolveWorkspaceSync(path: string): IResolvedWorkspace;
+	resolveWorkspaceSync(path: string): IResolvedWorkspace | null;
 
 	isUntitledWorkspace(workspace: IWorkspaceIdentifier): boolean;
 
